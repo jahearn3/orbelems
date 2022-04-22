@@ -9,11 +9,21 @@
 
 import numpy as np
 from constants_of_mercury6 import G, AU
-from bodies import R_Sat, mu_Sat, J2, J4, J6
+from bodies import R, mu, J2, J4, J6
 # ------------------------------------------------------------------------------------------------------------------
 
 def geo2xyz(a=167537.5, e=0.000457806317, i=0.001319397343, mean_longitude=207, longit_perictr=157.983521, long_ascnode=319.6712727):
-	# input parameters should be done in km and degrees
+	# default parameters are based on Saturn's moon Aegaeon
+	# input parameters should be in km and degrees
+	# ----------------------------------------------------------------------------------------------------------
+	# a = semimajor axis (km)
+	# e = eccentricity (dimensionless)
+	# i = inclination (degrees)
+	# mean_longitude = mean longitude (degrees)
+	# longit_perictr = longitude of pericenter (degrees)
+	# long_ascnode = longitude of the ascending node (degrees)
+	# ----------------------------------------------------------------------------------------------------------
+	# Unit Conversions
 	a = a * 1.0E+03 	# converting to meters
 	i = np.deg2rad(i)	# converting to radians
 	mean_longitude = np.deg2rad(mean_longitude)  	
@@ -21,8 +31,8 @@ def geo2xyz(a=167537.5, e=0.000457806317, i=0.001319397343, mean_longitude=207, 
 	long_ascnode   = np.deg2rad(long_ascnode)  				
 	# ----------------------------------------------------------------------------------------------------------	
 	# Extra computations to make the next lines look simpler and prettier
-	b = R_Sat() / a 
-	h = mu_Sat() / (a**3.0)
+	b = R() / a 
+	h = mu() / (a**3.0)
 	# Computing the Frequencies (Equations 14-21 in Renner-Sicardy 2006)
 	n        = np.sqrt(h) * (1.0 + (0.75 * (b**2.0) * J2()) - (0.9375 * (b**4.0) * J4()) + (1.09375 * (b**6.0) * J6()) - (0.28125 * (b**4.0) * (J2()**2.0)) + (0.703125  * (b**6.0) * J2() * J4()) + (0.2109375 * (b**6.0) * J2()**3.0) + (3.0 * (b**2.0) * J2() * (e**2.0)) - (12.0  * (b**2.0) * J2() * (i**2.0)))
 	kappa    = np.sqrt(h) * (1.0 - (0.75 * (b**2.0) * J2()) + (2.8125 * (b**4.0) * J4()) - (5.46875 * (b**6.0) * J6()) - (0.28125 * (b**4.0) * (J2()**2.0)) + (2.109375  * (b**6.0) * J2() * J4()) - (0.2109375 * (b**6.0) * J2()**3.0) - (9.0 * (b**2.0) * J2() * (i**2.0)))
@@ -44,4 +54,5 @@ def geo2xyz(a=167537.5, e=0.000457806317, i=0.001319397343, mean_longitude=207, 
 	y = r * np.sin(L)
 	xdot = (rdot * np.cos(L)) - (r * Ldot * np.sin(L))
 	ydot = (rdot * np.sin(L)) + (r * Ldot * np.cos(L))
-	return x / AU(), y / AU(), z / AU(), xdot * 86400.0 / AU(), ydot * 86400.0 / AU(), zdot * 86400.0 / AU() # units of AU and AU/day
+	return x / AU(), y / AU(), z / AU(), xdot * 86400.0 / AU(), ydot * 86400.0 / AU(), zdot * 86400.0 / AU() 
+	# values returned are in units of AU and AU/day (ready for Mercury6 input files big.in or small.in)

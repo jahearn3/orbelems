@@ -6,9 +6,9 @@
 #
 # This program converts the cartesian position vectors to geocentric orbital elements
 #   It is based on Maryame el Moutamid's Fortran code
+#   which is based on Renner & Sicardy 2006
 
 import numpy as np
-import math # I don't remember if this is used at all
 
 import constants_of_mercury6 
 import bodies as bd 
@@ -49,56 +49,42 @@ def initialize_orbital_elements(s): 	# Initial assumption: perfect circle in the
 def initialize_second_order():
 	return (0, 0, 0, 0, 0, 0) # These become (s_C, L_C, z_C, s_dot_C, L_dot_C, z_dot_C)
 
-def mean_motion(R_Sat, mu_Sat, J2, J4, J6, geometric_elements): # Equation 14 in Renner-Sicardy 2006
-	b = (R_Sat/geometric_elements[0]) 
+def mean_motion(R, mu, J2, J4, J6, geometric_elements): # Equation 14 in Renner-Sicardy 2006
+	b = (R/geometric_elements[0]) 
 	n_1st_order = (1.0 + (0.75 * ((b)**2.0) * J2) - (0.9375 * ((b)**4.0) * J4) + (1.09375 * ((b)**6.0) * J6))
 	n_2nd_order = (- (0.28125 * ((b)**4.0) * J2**2.0) + (0.703125 * ((b)**6.0) * J2 * J4) + (0.2109375 * ((b)**6.0) * J2**3.0) + (3.0 * ((b)**2.0) * J2 * geometric_elements[1]**2.0)  - (12.0 * ((b)**2.0) * J2 * geometric_elements[2]**2.0))
-	n = ((mu_Sat/((geometric_elements[0])**3.0))**0.5) * (n_1st_order + n_2nd_order)
+	n = ((mu/((geometric_elements[0])**3.0))**0.5) * (n_1st_order + n_2nd_order)
 	return n
 
-#def precession(R_Sat, mu_Sat, J2, J4, J6, geometric_elements):
-#	b = (R_Sat/geometric_elements[0]) 
-#	apsidal_part1 = (( 1.5 * b**2.0 * J2) - (3.75 * b**4.0 * J4) + (6.5625 * b**6.0 * J6))
-#	apsidal_part2 = (- (1.40625 * b**6.0 * J2 * J4) + (0.421875 * b**6.0 * J2**3.0) + (3.0 * b**2.0 * J2 * geometric_elements[2]**2.0) - (3.0 * b**2.0 * J2 * geometric_elements[3]**2.0))
-#	apsidal_precession_rate = ((mu_Sat/((geometric_elements[0])**3.0))**0.5) * (apsidal_part1 + apsidal_part2)
-#	prec_ascnode1 = ((-1.5 * b**2.0 * J2) + (3.75 * b**4.0 * J4) - (6.5625 * b**6.0 * J6))
-#	prec_ascnode2 = ((2.25 * b**4.0 * J2**2.0) - (9.84375 * b**6.0 * J2 * J4) - (5.484375 * b**6.0 * J2**3.0) - (3.0 * b**2.0 * J2 * geometric_elements[2]**2.0) + (0.75 * b**2.0 * J2 * geometric_elements[3]**2.0))
-#	precessn_of_ascend_node = ((mu_Sat/((geometric_elements[0])**3.0))**0.5) * (prec_ascnode1 + prec_ascnode2)
-#	#print "precession rates: " + str(apsidal_precession_rate) + "\t\t" + str(precessn_of_ascend_node)
-#	return (apsidal_precession_rate, precessn_of_ascend_node)
-
-def square_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements):
-	b = R_Sat / geometric_elements[0] 
-	eta_sq = (mu_Sat / ((geometric_elements[0])**3)) * (1 -  (2.0  * (b**2) * J2) + (9.375  * (b**4) * J4) - (21.875  * (b**6) * J6))
-	chi_sq = (mu_Sat / ((geometric_elements[0])**3)) * (1 +  (7.5  * (b**2) * J2) - (21.875 * (b**4) * J4) + (45.9375 * (b**6) * J6))
+def square_frequencies(R, mu, J2, J4, J6, geometric_elements):
+	b = R / geometric_elements[0] 
+	eta_sq = (mu / ((geometric_elements[0])**3)) * (1 -  (2.0  * (b**2) * J2) + (9.375  * (b**4) * J4) - (21.875  * (b**6) * J6))
+	chi_sq = (mu / ((geometric_elements[0])**3)) * (1 +  (7.5  * (b**2) * J2) - (21.875 * (b**4) * J4) + (45.9375 * (b**6) * J6))
 	return (eta_sq, chi_sq)
 
-def freq_nsq(R_Sat, mu_Sat, J2, J4, J6, s0):
-	b = R_Sat / s0
-	nsq = (mu_Sat / (s0**3)) * (1.0 + (1.5 * J2 * (b**2)) - (1.875 * J4 * (b**4)) + (2.1875 * J6 * (b**6)))
+def freq_nsq(R, mu, J2, J4, J6, s0):
+	b = R / s0
+	nsq = (mu / (s0**3)) * (1.0 + (1.5 * J2 * (b**2)) - (1.875 * J4 * (b**4)) + (2.1875 * J6 * (b**6)))
 	return nsq
 
-def horizontal_epicyclic(R_Sat, mu_Sat, J2, J4, J6, geometric_elements):
-	b = R_Sat / geometric_elements[0] 
+def horizontal_epicyclic(R, mu, J2, J4, J6, geometric_elements):
+	b = R / geometric_elements[0] 
 	k1 = 1 - ((3 / 4) * J2 * (b**2)) + ((45 / 16) * J4 * (b**4)) - ((175 / 32) * J6 * (b**6))
 	k2 = (- ((9 / 32) * (J2**2) * (b**4))) + ((135 / 64) * J2 * J4 * (b**6)) - ((27 / 128) * (J2**3) * (b**6)) - (9 * (b**2) * J2 * (geometric_elements[2]**2))
-	return np.sqrt(mu_Sat / (geometric_elements[0]**3)) * (k1 + k2)
+	return np.sqrt(mu / (geometric_elements[0]**3)) * (k1 + k2)
 
-def vertical_epicyclic(R_Sat, mu_Sat, J2, J4, J6, geometric_elements):
-	b = R_Sat / geometric_elements[0]
+def vertical_epicyclic(R, mu, J2, J4, J6, geometric_elements):
+	b = R / geometric_elements[0]
 	n1 = 1 + ((9 / 4) * (b**2) * J2) - ((75 / 16) * (b**4) * J4) + ((245 / 32) * (b**6) * J6)
 	n2 = (- ((81 / 32) * (b**4) * (J2**2))) + ((675 / 64) * (b**6) * J2 * J4) + ((729 / 128) * (b**6) * (J2**3))
 	n3 = (6 * (b**2) * J2 * (geometric_elements[1]**2)) - ((51 / 4) * (b**2) * J2 * (geometric_elements[1]**2))
-	return np.sqrt(mu_Sat / (geometric_elements[0]**3)) * (n1 + n2 + n3)
+	return np.sqrt(mu / (geometric_elements[0]**3)) * (n1 + n2 + n3)
 
-def all_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements):  # Computing the Frequencies (Equations 14-21 in Renner-Sicardy 2006)
-	n = mean_motion(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
-	#precession_rates = precession(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
-	sq_frequencies = square_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
-	#kappa = n - precession_rates[0]
-	#nu = n - precession_rates[1]
-	kappa = horizontal_epicyclic(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
-	nu = vertical_epicyclic(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
+def all_frequencies(R, mu, J2, J4, J6, geometric_elements):  # Computing the Frequencies (Equations 14-21 in Renner-Sicardy 2006)
+	n = mean_motion(R, mu, J2, J4, J6, geometric_elements)
+	sq_frequencies = square_frequencies(R, mu, J2, J4, J6, geometric_elements)
+	kappa = horizontal_epicyclic(R, mu, J2, J4, J6, geometric_elements)
+	nu = vertical_epicyclic(R, mu, J2, J4, J6, geometric_elements)
 	eta_sq = sq_frequencies[0]
 	chi_sq = sq_frequencies[1]
 	alpha_1  = (((2 * nu) + kappa) / 3)
@@ -183,8 +169,8 @@ def compute_second_order(geometric_elements, frequencies):
 	z_dot_C = a * i * e * (z_dot_C_1 + z_dot_C_2)
 	return (s_C, L_C, z_C, s_dot_C, L_dot_C, z_dot_C)
 
-def refine_semimajor_axis(R_Sat, mu_Sat, J2, J4, J6, geometric_elements, cylindrical_state_vectors, epsilon, hz):
-	nsq = freq_nsq(R_Sat, mu_Sat, J2, J4, J6, cylindrical_state_vectors[0])
+def refine_semimajor_axis(R, mu, J2, J4, J6, geometric_elements, cylindrical_state_vectors, epsilon, hz):
+	nsq = freq_nsq(R, mu, J2, J4, J6, cylindrical_state_vectors[0])
 	n0 = np.sqrt(nsq)
 	s0c = 0
 	iterate = True
@@ -194,7 +180,7 @@ def refine_semimajor_axis(R_Sat, mu_Sat, J2, J4, J6, geometric_elements, cylindr
 		if(np.absolute(s0c - s0) < epsilon):
 			iterate = False
 		s0c = s0
-		nsq = freq_nsq(R_Sat, mu_Sat, J2, J4, J6, s0)
+		nsq = freq_nsq(R, mu, J2, J4, J6, s0)
 		n0 = np.sqrt(nsq)
 		itercount += 1
 	a_refined = s0 * (1 + (geometric_elements[1]**2) + (geometric_elements[2]**2))
@@ -203,14 +189,14 @@ def refine_semimajor_axis(R_Sat, mu_Sat, J2, J4, J6, geometric_elements, cylindr
 
 def xyz2geo_0(x, y, z, u, v, w):
 	AU = constants_of_mercury6.AU()
-	R_Sat = bd.R_Sat()
-	mu_Sat = bd.mu_Sat()
+	R = bd.R()
+	mu = bd.mu()
 	J2 = bd.J2()
 	J4 = bd.J4()
 	J6 = bd.J6()
 	cylindrical_state_vectors = compute_cylindrical_state_vectors(x, y, z, u, v, w, AU)
 	geometric_elements = initialize_orbital_elements(cylindrical_state_vectors[0])
-	frequencies = all_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
+	frequencies = all_frequencies(R, mu, J2, J4, J6, geometric_elements)
 	second_order = initialize_second_order()
 	a_prev = 0 
 	iterate = True
@@ -227,7 +213,7 @@ def xyz2geo_0(x, y, z, u, v, w):
 			print(str(iteration) + " iterations complete: a = " + str(geometric_elements[0]) + ", delta_a = " + str(geometric_elements[0] - a_prev)) 
 			iterate = False
 		a_prev = geometric_elements[0]
-		frequencies = all_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
+		frequencies = all_frequencies(R, mu, J2, J4, J6, geometric_elements)
 		iteration += 1
 	return geometric_elements[0], geometric_elements[1], np.rad2deg(geometric_elements[2]), np.rad2deg(geometric_elements[3]), np.rad2deg(geometric_elements[4]), np.rad2deg(geometric_elements[5])
 
@@ -237,8 +223,8 @@ def xyz2geo_0(x, y, z, u, v, w):
 # Main
 def xyz2geo(body_list=bd.full_body_list(), increment=1, epsilon=1.0E-04, use_L_z_for_a=False, max_iterations=150, plots=False):
 	AU = constants_of_mercury6.AU()
-	R_Sat = bd.R_Sat()
-	mu_Sat = bd.mu_Sat()
+	R = bd.R()
+	mu = bd.mu()
 	J2 = bd.J2()
 	J4 = bd.J4()
 	J6 = bd.J6()
@@ -268,7 +254,7 @@ def xyz2geo(body_list=bd.full_body_list(), increment=1, epsilon=1.0E-04, use_L_z
 			while(j < len(t)):
 				cylindrical_state_vectors = compute_cylindrical_state_vectors(x[j], y[j], z[j], u[j], v[j], w[j], AU)
 				geometric_elements = initialize_orbital_elements(cylindrical_state_vectors[0])
-				frequencies = all_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
+				frequencies = all_frequencies(R, mu, J2, J4, J6, geometric_elements)
 				second_order = initialize_second_order()
 				a_prev = 0 
 				iterate = True
@@ -300,7 +286,7 @@ def xyz2geo(body_list=bd.full_body_list(), increment=1, epsilon=1.0E-04, use_L_z
 						print(str(iteration) + " iterations complete: a = " + str(geometric_elements[0]) + ", delta_a = " + str(geometric_elements[0] - a_prev)) 
 						iterate = False
 					a_prev = geometric_elements[0]
-					frequencies = all_frequencies(R_Sat, mu_Sat, J2, J4, J6, geometric_elements)
+					frequencies = all_frequencies(R, mu, J2, J4, J6, geometric_elements)
 					if(plots == True):
 						ite.append(iteration)
 						a.append(geometric_elements[0])
@@ -334,7 +320,7 @@ def xyz2geo(body_list=bd.full_body_list(), increment=1, epsilon=1.0E-04, use_L_z
 				
 				# semi-major axis
 				if (use_L_z_for_a == True):
-					a_refined = refine_semimajor_axis(R_Sat, mu_Sat, J2, J4, J6, geometric_elements, cylindrical_state_vectors, epsilon, hz[j])
+					a_refined = refine_semimajor_axis(R, mu, J2, J4, J6, geometric_elements, cylindrical_state_vectors, epsilon, hz[j])
 					myfile.write("\t\t%.3f" % a_refined)
 				else:
 					myfile.write("\t\t%.3f" % geometric_elements[0]) 				
@@ -416,16 +402,15 @@ def xyz2geo(body_list=bd.full_body_list(), increment=1, epsilon=1.0E-04, use_L_z
 			pa.save_and_clear32plot(fig, ax1, ax2, ax3, ax4, ax5, ax6, body + '_2nd_order_terms')
 	print("    Conversion to geometric orbital elements complete.")
 		
-#xyz2geo()
 def unitcheck():
 	print('AU: ' + str(constants_of_mercury6.AU())) 
-	print('R_Sat: ' + str(bd.R_Sat())) 
-	print('mu_Sat: ' + str(bd.mu_Sat()))
+	print('R: ' + str(bd.R())) 
+	print('mu: ' + str(bd.mu()))
 	print('J2: ' + str(bd.J2()))
 	print('J4: ' + str(bd.J4()))
 	print('J6: ' + str(bd.J6()))
 
 
 
-
+#xyz2geo()
 #unitcheck()
